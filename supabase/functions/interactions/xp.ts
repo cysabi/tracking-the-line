@@ -1,13 +1,116 @@
+import { SupabaseClient } from "@supabase/supabase-js";
 import { respond } from "./utils.ts";
+import { dateToSeason } from "./utils.ts";
 
-export function command(body: Root) {
-  const userid = body.member.user.id;
-  const power = body.data.options?.find((o) => o.name === "power")?.value;
+export async function command(body: Root, supabase: SupabaseClient) {
+  const power = parsePower(body);
+  const season = dateToSeason(new Date());
+
+  if (power === false) {
+    return respondError(
+      "Malformed power, it should be in the format: `-15`, `+22.4`, `2650.5`",
+    );
+  }
+  if (power === null) {
+    return graphPower(supabase, body.member.user.id, season);
+  }
+  return trackPower(supabase, body.member.user.id, season, power);
+}
+
+async function graphPower(
+  supabase: SupabaseClient,
+  discordId: string,
+  season: number,
+) {
+  const { data, error } = await supabase
+    .from("powers")
+    .select("*")
+    .eq("discord_id", discordId)
+    .eq("season", season)
+    .order("created_at", { ascending: false });
+  if (error) return respondError(error.message);
+
+  // show a graph
+}
+
+async function trackPower(
+  supabase: SupabaseClient,
+  discordId: string,
+  season: number,
+  power: { op: "add" | "set"; value: number },
+) {
+  const { data, error: queryError } = await supabase
+    .from("powers")
+    .select("power")
+    .eq("discord_id", discordId)
+    .eq("season", season)
+    .order("created_at", { ascending: false });
+  if (queryError) return respondError(queryError.message);
+
+  if (power.op === "add") {
+    if (data.length === 0) {
+      return respondError(
+        "You don't have a calc for this season yet, set one with `/xp [power]`",
+      );
+    }
+
+    power.value = (power.value * 10 + data[0].power * 10) / 10;
+  }
+
+  const { error: insertError } = await supabase.from("powers").insert({
+    discord_id: discordId,
+    season: season,
+    power: power.value,
+  });
+  if (insertError) return respondError(insertError.message);
 
   return respond({
     type: 4,
+    data: { content: displayTrackedPower(data, power) },
+  });
+}
+
+function displayTrackedPower(
+  data: { power: number }[],
+  power: { op: "add" | "set"; value: number },
+) {
+  let content = "";
+  if (data.length === 0) {
+    content = `⏱️ **\`${power.value}\`**`;
+  } else {
+    const delta = (power.value * 10 - data[0].power * 10) / 10;
+    const icon = delta >= 0 ? "📈" : "📉";
+    const prefix = delta > 0 ? "+" : "";
+    content = `${icon} **\`${prefix}${delta}\`**\n-# \`${
+      data[0].power
+    }\` ↠ \`${power.value}\``;
+  }
+  return content;
+}
+
+function parsePower(body: Root) {
+  const arg = body.data.options?.find((o) => o.name === "power")?.value;
+  if (!arg) return null;
+
+  let op: "add" | "set" = "set";
+  const value = Math.round(parseFloat(arg) * 10) / 10;
+
+  if (isNaN(value)) return false;
+  if (arg.at(0) === "+" || arg.at(0) === "-") {
+    if (Math.abs(value) < 5 || Math.abs(value) > 999) return false;
+    op = "add";
+  } else {
+    if (value < 1000 || value > 9999) return false;
+  }
+  return { op, value };
+}
+
+function respondError(message: string) {
+  return respond({
+    type: 4,
     data: {
-      content: `${userid} ${power}`,
+      flags: 64,
+      content: `🚫 ${message}`,
     },
   });
 }

@@ -1,5 +1,13 @@
 import nacl from "tweetnacl";
 
+/** utility to return a json response */
+export function respond(data: any, options: ResponseInit = {}) {
+  return new Response(JSON.stringify(data), {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+}
+
 /** Verify whether the request is coming from Discord. */
 export async function verifySignature(
   request: Request,
@@ -19,16 +27,22 @@ export async function verifySignature(
 
   return { valid, body };
 }
-
-/** utility to return a json response */
-export function respond(data: any, options: ResponseInit = {}) {
-  return new Response(JSON.stringify(data), {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-}
-
-/** Converts a hexadecimal string to Uint8Array. */
 function hexToUint8Array(hex: string) {
   return new Uint8Array(hex.match(/.{1,2}/g)!.map((val) => parseInt(val, 16)));
+}
+
+export function dateToSeason(date: Date) {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+
+  const seasonId = (((year - 2022) * 4) - 3) + Math.floor((month + 1) / 3);
+  return seasonId;
+}
+
+export function seasonIdtoName(seasonId: number) {
+  const year = 2022 + Math.floor((seasonId + 2) / 4);
+  const month = ["🌸 Fresh", "🔥 Sizzle", "☔ Drizzle", "❄️ Chill"].at(
+    (seasonId + 2) % 4,
+  );
+  return `${month} Season ${year}`;
 }

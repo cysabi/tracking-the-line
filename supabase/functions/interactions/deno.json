@@ -1,5 +1,6 @@
 {
     "imports": {
-        "tweetnacl": "npm:tweetnacl@1"
+        "tweetnacl": "npm:tweetnacl@1",
+        "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.86.0"
     }
 }
