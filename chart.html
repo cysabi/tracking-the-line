@@ -11,29 +11,25 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const data = urlParams.get("data");
-    const rows = data.split("|").map((row) => {
-        const [date, power] = row.split("~");
-        return { date: new Date(date), power: parseFloat(power) };
+    const rows = data.split("~").map((row) => {
+        const [date, power] = row.split("-");
+        return {
+            date: new Date(parseInt(date, 36) * 1000),
+            power: parseFloat(power),
+        };
     });
 
-    const isLocalMinMax = (i) => {
+    function isLocalMinMax(rows, i) {
         const d = rows[i];
         const prev = rows[i - 1];
         const next = rows[i + 1];
 
-        if (!prev || !next) return "edge";
+        if (!prev) return next.power > d.power ? "min" : "max";
+        if (!next) return prev.power > d.power ? "min" : "max";
+
         if (prev.power < d.power && next.power < d.power) return "max";
         if (prev.power > d.power && next.power > d.power) return "min";
-    };
-
-    const plotTextArgs = {
-        x: "date",
-        y: "power",
-        text: (d) => `${d.power.toFixed(1)}`,
-        fill: "oklch(70.4% 0.04 256.788)",
-        stroke: "oklch(27.9% 0.041 260.031)",
-        strokeWidth: 5,
-    };
+    }
 
     const plot = Plot.plot({
         margin: 64,
@@ -76,31 +72,25 @@
                 r: 5,
                 fill: "oklch(27.9% 0.041 260.031)",
             }),
-            Plot.text(rows, {
-                ...plotTextArgs,
-                filter: (d, i) => {
-                    const local = isLocalMinMax(i);
-                    return local === "max";
-                },
-                dy: -16,
-                lineAnchor: "bottom",
-            }),
-            Plot.text(rows, {
-                ...plotTextArgs,
-                filter: (d, i) => {
-                    const local = isLocalMinMax(i);
-                    return local === "min";
-                },
-                dy: 16,
-                lineAnchor: "top",
-            }),
-            Plot.text(rows, {
-                ...plotTextArgs,
-                filter: (d, i) => {
-                    return i === rows.length - 1;
-                },
-                lineAnchor: "middle",
-            }),
+            ...[
+                ["min", 1, "top"],
+                ["max", -1, "bottom"],
+            ].map(([minMax, dyMult, lineAnchor]) =>
+                Plot.text(rows, {
+                    x: "date",
+                    y: "power",
+                    text: (d) => `${d.power.toFixed(1)}`,
+                    fill: "#90a1b9",
+                    stroke: "#1d293d",
+                    strokeWidth: 5,
+                    filter: (_d, i) => {
+                        const local = isLocalMinMax(rows, i);
+                        return local === minMax;
+                    },
+                    dy: 16 * dyMult,
+                    lineAnchor,
+                }),
+            ),
         ],
     });
 

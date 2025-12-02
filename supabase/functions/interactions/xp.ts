@@ -38,7 +38,14 @@ async function graphPower(
         title: seasonIdtoName(dateToSeason(new Date())),
         url: `https://cysabi.github.io/tracking-the-line/chart?data=${
           encodeURIComponent(
-            data.map((row) => `${row.created_at}~${row.power}`).join("|"),
+            data.map((row) =>
+              [
+                Math.floor(new Date(row.created_at).valueOf() / 1000).toString(
+                  36,
+                ),
+                row.power,
+              ].join("-")
+            ).join("~"),
           )
         }`,
         image: { url: "attachment://chart.png" },
@@ -75,10 +82,10 @@ async function graphPower(
     "payload_json",
     JSON.stringify(payload),
   );
-  formData.append(
-    "files[0]",
-    new File([await visualize(data)], "chart.png", { type: "image/png" }),
-  );
+  // formData.append(
+  //   "files[0]",
+  //   new File([await visualize(data)], "chart.png", { type: "image/png" }),
+  // );
 
   return new Response(formData);
 }

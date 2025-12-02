@@ -57,8 +57,8 @@ export async function visualize(data: { created_at: string; power: number }[]) {
         r: 5,
         fill: "#1d293d",
       }),
-      ...[["min", 1, "top"] as const, ["max", -1, "bottom"] as const].map(
-        ([minMax, dyMult, lineAnchor]) =>
+      ...[["min", 1, "top"] as const, ["max", -1, "bottom"] as const]
+        .map(([minMax, dyMult, lineAnchor]) =>
           Plot.text(rows, {
             x: "date",
             y: "power",
@@ -72,8 +72,8 @@ export async function visualize(data: { created_at: string; power: number }[]) {
             },
             dy: 16 * dyMult,
             lineAnchor,
-          }),
-      ),
+          })
+        ),
     ],
   });
 
@@ -88,16 +88,14 @@ export async function visualize(data: { created_at: string; power: number }[]) {
     "http://www.w3.org/1999/xlink",
   );
 
-  const fontBuffer = await promises.readFile("./SpaceMono-Regular.ttf");
-
-  await resvg.initWasm(
-    fetch("https://unpkg.com/@resvg/resvg-wasm/index_bg.wasm"), // figure out how to load it locally
-  ); // TODO something around here causes infinite hang
+  await resvg.initWasm(promises.readFile("./index_bg.wasm"));
   return new resvg.Resvg(
     plot.outerHTML,
     {
       background: `#1d293d`,
-      font: { fontBuffers: [fontBuffer] },
+      font: {
+        fontBuffers: [await promises.readFile("./SpaceMono-Regular.ttf")],
+      },
     },
   ).render().asPng();
 }
