@@ -9,9 +9,9 @@ Add the bot to your server with this link: https://discord.com/oauth2/authorize?
 `/xp` to view a graph of your power over the course of the season.
 
 ## local setup
-The discord bot works by hosting a discord interaction endpoint over serverless functions with [supabase](https://supabase.com).
+The discord bot works by hosting a [discord interaction endpoint](https://discord.com/developers/docs/interactions/receiving-and-responding) over [supabase edge functions](https://supabase.com/edge-functions).
 
-The graph page is at the root of the repo, and is served with github pages.
+The chart page is at the root of the repo ([here](https://github.com/cysabi/tracking-the-line/blob/main/chart.html)), and is just served with github pages.
 
 ---
 
