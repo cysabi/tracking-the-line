@@ -27,7 +27,7 @@ export async function visualize(data: { created_at: string; power: number }[]) {
       color: "#62748e",
       fontFamily: "Space Mono",
     },
-    y: { tickFormat: (d) => "" + d, label: null, tickSize: 0 },
+    y: { tickFormat: (d) => "" + d, label: null },
     marks: [
       () =>
         htl
