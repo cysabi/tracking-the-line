@@ -56,7 +56,7 @@ async function graphPower(
           },
           {
             name: "Peak XP",
-            value: `\`${Math.max(...data.map((r) => r.power))}\``,
+            value: `\`${Math.max(...data.map((r) => r.power)).toFixed(1)}\``,
             inline: true,
           },
           {
