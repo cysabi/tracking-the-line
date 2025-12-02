@@ -1,6 +1,5 @@
 import nacl from "tweetnacl";
 
-/** utility to return a json response */
 export function respond(data: any, options: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
     headers: { "Content-Type": "application/json" },
@@ -8,7 +7,6 @@ export function respond(data: any, options: ResponseInit = {}) {
   });
 }
 
-/** Verify whether the request is coming from Discord. */
 export async function verifySignature(
   request: Request,
 ): Promise<{ valid: boolean; body: string }> {

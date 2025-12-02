@@ -94,9 +94,10 @@ export async function visualize(data: { created_at: string; power: number }[]) {
     "xmlns:xlink",
     "http://www.w3.org/1999/xlink",
   );
+
   await resvg.initWasm(
     fetch("https://unpkg.com/@resvg/resvg-wasm/index_bg.wasm"),
-  );
+  ); // TODO something around here causes infinite hang
 
   return new resvg.Resvg(plot.outerHTML).render().asPng();
 }
