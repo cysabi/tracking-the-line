@@ -31,14 +31,6 @@ async function graphPower(
     .order("created_at", { ascending: false });
   if (error) return respondError(error.message);
 
-  console.log(
-    `https://cysabi.github.io/tracking-the-line/chart?data=${
-      encodeURIComponent(
-        data.map((row) => `${row.created_at},${row.power}`).join(";"),
-      )
-    }`,
-  );
-
   const payload = {
     type: 4,
     data: {
@@ -49,17 +41,9 @@ async function graphPower(
             data.map((row) => `${row.created_at}~${row.power}`).join("|"),
           )
         }`,
-        // image: { url: "attachment://chart.png" },
+        image: { url: "attachment://chart.png" },
         color: 1039259,
         fields: [
-          {
-            name: "Current XP",
-            value: `\`${data[0].power.toFixed(1)}\``,
-          },
-          {
-            name: "Peak XP",
-            value: `\`${Math.max(...data.map((r) => r.power))}\``,
-          },
           {
             name: "Average XP",
             value: `\`${
@@ -68,27 +52,35 @@ async function graphPower(
                   10,
               ) / 10
             }\``,
+            inline: true,
+          },
+          {
+            name: "Peak XP",
+            value: `\`${Math.max(...data.map((r) => r.power))}\``,
+            inline: true,
+          },
+          {
+            name: "Current XP",
+            value: `\`${data[0].power.toFixed(1)}\``,
+            inline: true,
           },
         ],
       }],
     },
   };
 
-  return respond(payload);
+  const formData = new FormData();
 
-  // // TODO why does this not work
-  // const formData = new FormData();
+  formData.append(
+    "payload_json",
+    JSON.stringify(payload),
+  );
+  formData.append(
+    "files[0]",
+    new File([await visualize(data)], "chart.png", { type: "image/png" }),
+  );
 
-  // formData.append(
-  //   "payload_json",
-  //   new Blob([JSON.stringify(payload)], { type: "application/json" }),
-  // );
-  // formData.append(
-  //   "files[0]",
-  //   new File([await visualize(data)], "chart.png", { type: "image/png" }),
-  // );
-
-  // return new Response(formData);
+  return new Response(formData);
 }
 
 async function trackPower(

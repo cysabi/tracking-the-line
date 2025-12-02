@@ -2,6 +2,7 @@ import * as Plot from "@observablehq/plot";
 import * as htl from "htl";
 import * as resvg from "@resvg/resvg-wasm";
 import { JSDOM } from "jsdom";
+import { promises } from "node:fs";
 
 export async function visualize(data: { created_at: string; power: number }[]) {
   const rows = data.map((row) => ({
@@ -17,14 +18,14 @@ export async function visualize(data: { created_at: string; power: number }[]) {
     document: window.document,
     margin: 64,
     marginLeft: 64 + 8,
-    height: 90,
-    width: 160,
+    height: 900,
+    width: 1600,
     grid: true,
     style: {
       fontSize: "17px",
-      backgroundColor: "oklch(27.9% 0.041 260.031)",
-      color: "oklch(55.4% 0.046 257.417)",
-      fontFamily: "monospace",
+      backgroundColor: "#1d293d",
+      color: "#62748e",
+      fontFamily: "Space Mono",
     },
     y: { tickFormat: (d) => "" + d, label: null, tickSize: 0 },
     marks: [
@@ -32,7 +33,7 @@ export async function visualize(data: { created_at: string; power: number }[]) {
         htl
           .svg`<defs><linearGradient id="gradient" gradientTransform="rotate(90)">
             <stop offset="0%" stop-color="#0fdb9b" stop-opacity="0.5" />
-            <stop offset="100%" stop-color="#0fdb9b" />
+            <stop offset="100%" stop-color="#0fdb9b" stop-opacity="0" />
           </linearGradient></defs>`,
       Plot.areaY(rows, {
         x: "date",
@@ -54,33 +55,25 @@ export async function visualize(data: { created_at: string; power: number }[]) {
         stroke: "#0fdb9b",
         strokeWidth: 5,
         r: 5,
-        fill: "oklch(27.9% 0.041 260.031)",
+        fill: "#1d293d",
       }),
-      Plot.text(rows, {
-        ...plotTextArgs,
-        filter: (_d, i) => {
-          const local = isLocalMinMax(rows, i);
-          return local === "max";
-        },
-        dy: -16,
-        lineAnchor: "bottom",
-      }),
-      Plot.text(rows, {
-        ...plotTextArgs,
-        filter: (_d, i) => {
-          const local = isLocalMinMax(rows, i);
-          return local === "min";
-        },
-        dy: 16,
-        lineAnchor: "top",
-      }),
-      Plot.text(rows, {
-        ...plotTextArgs,
-        filter: (_d, i) => {
-          return i === rows.length - 1;
-        },
-        lineAnchor: "middle",
-      }),
+      ...[["min", 1, "top"] as const, ["max", -1, "bottom"] as const].map(
+        ([minMax, dyMult, lineAnchor]) =>
+          Plot.text(rows, {
+            x: "date",
+            y: "power",
+            text: (d: { power: number }) => `${d.power.toFixed(1)}`,
+            fill: "#90a1b9",
+            stroke: "#1d293d",
+            strokeWidth: 5,
+            filter: (_d, i) => {
+              const local = isLocalMinMax(rows, i);
+              return local === minMax;
+            },
+            dy: 16 * dyMult,
+            lineAnchor,
+          }),
+      ),
     ],
   });
 
@@ -95,11 +88,18 @@ export async function visualize(data: { created_at: string; power: number }[]) {
     "http://www.w3.org/1999/xlink",
   );
 
-  await resvg.initWasm(
-    fetch("https://unpkg.com/@resvg/resvg-wasm/index_bg.wasm"),
-  ); // TODO something around here causes infinite hang
+  const fontBuffer = await promises.readFile("./SpaceMono-Regular.ttf");
 
-  return new resvg.Resvg(plot.outerHTML).render().asPng();
+  await resvg.initWasm(
+    fetch("https://unpkg.com/@resvg/resvg-wasm/index_bg.wasm"), // figure out how to load it locally
+  ); // TODO something around here causes infinite hang
+  return new resvg.Resvg(
+    plot.outerHTML,
+    {
+      background: `#1d293d`,
+      font: { fontBuffers: [fontBuffer] },
+    },
+  ).render().asPng();
 }
 
 function isLocalMinMax(rows: { power: number }[], i: number) {
@@ -107,16 +107,9 @@ function isLocalMinMax(rows: { power: number }[], i: number) {
   const prev = rows[i - 1];
   const next = rows[i + 1];
 
-  if (!prev || !next) return "edge";
+  if (!prev) return (next.power > d.power ? "min" : "max");
+  if (!next) return (prev.power > d.power ? "min" : "max");
+
   if (prev.power < d.power && next.power < d.power) return "max";
   if (prev.power > d.power && next.power > d.power) return "min";
 }
-
-const plotTextArgs = {
-  x: "date",
-  y: "power",
-  text: (d: { power: number }) => `${d.power.toFixed(1)}`,
-  fill: "oklch(70.4% 0.04 256.788)",
-  stroke: "oklch(27.9% 0.041 260.031)",
-  strokeWidth: 5,
-};
