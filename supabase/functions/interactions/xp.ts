@@ -1,8 +1,9 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { respond } from "./utils.ts";
+import { respond, seasonIdtoName } from "./utils.ts";
 import { dateToSeason } from "./utils.ts";
+import { visualize } from "./chart.ts";
 
-export async function command(body: Root, supabase: SupabaseClient) {
+export function command(body: Root, supabase: SupabaseClient) {
   const power = parsePower(body);
   const season = dateToSeason(new Date());
 
@@ -24,13 +25,70 @@ async function graphPower(
 ) {
   const { data, error } = await supabase
     .from("powers")
-    .select("*")
+    .select("power, created_at")
     .eq("discord_id", discordId)
     .eq("season", season)
     .order("created_at", { ascending: false });
   if (error) return respondError(error.message);
 
-  // show a graph
+  console.log(
+    `file://///wsl.localhost/Ubuntu/root/tracking-the-line/testing/test.html?data=${
+      encodeURIComponent(
+        data.map((row) => `${row.created_at},${row.power}`).join(";"),
+      )
+    }`,
+  );
+
+  const payload = {
+    type: 4,
+    data: {
+      embeds: [{
+        title: seasonIdtoName(dateToSeason(new Date())),
+        url:
+          `https://whahter.com/root/tracking-the-line/testing/test.html?data=${
+            encodeURIComponent(
+              data.map((row) => `${row.created_at}~${row.power}`).join("|"),
+            )
+          }`,
+        // image: { url: "attachment://chart.png" },
+        color: 1039259,
+        fields: [
+          {
+            name: "Current XP",
+            value: `\`${data[0].power.toFixed(1)}\``,
+          },
+          {
+            name: "Peak XP",
+            value: `\`${Math.max(...data.map((r) => r.power))}\``,
+          },
+          {
+            name: "Average XP",
+            value: `\`${
+              Math.round(
+                (data.reduce((acc, val) => acc + val.power, 0) / data.length) *
+                  10,
+              ) / 10
+            }\``,
+          },
+        ],
+      }],
+    },
+  };
+
+  return respond(payload);
+
+  const formData = new FormData();
+
+  formData.append(
+    "payload_json",
+    new Blob([JSON.stringify(payload)], { type: "application/json" }),
+  );
+  formData.append(
+    "files[0]",
+    new File([await visualize(data)], "chart.png", { type: "image/png" }),
+  );
+
+  return new Response(formData);
 }
 
 async function trackPower(

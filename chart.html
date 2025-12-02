@@ -1,0 +1,109 @@
+<!doctype html>
+<div id="container"></div>
+<style>
+    body {
+        background-color: oklch(27.9% 0.041 260.031);
+    }
+</style>
+<script type="module">
+    import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+    import * as htl from "https://cdn.jsdelivr.net/npm/htl@0.3/+esm";
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const data = urlParams.get("data");
+    const rows = data.split("|").map((row) => {
+        const [date, power] = row.split("~");
+        return { date: new Date(date), power: parseFloat(power) };
+    });
+
+    const isLocalMinMax = (i) => {
+        const d = rows[i];
+        const prev = rows[i - 1];
+        const next = rows[i + 1];
+
+        if (!prev || !next) return "edge";
+        if (prev.power < d.power && next.power < d.power) return "max";
+        if (prev.power > d.power && next.power > d.power) return "min";
+    };
+
+    const plotTextArgs = {
+        x: "date",
+        y: "power",
+        text: (d) => `${d.power.toFixed(1)}`,
+        fill: "oklch(70.4% 0.04 256.788)",
+        stroke: "oklch(27.9% 0.041 260.031)",
+        strokeWidth: 5,
+    };
+
+    const plot = Plot.plot({
+        margin: 64,
+        marginLeft: 64 + 8,
+        height: 900,
+        width: 1600,
+        grid: true,
+        style: {
+            width: "100%",
+            fontSize: "17px",
+            backgroundColor: "oklch(27.9% 0.041 260.031)",
+            color: "oklch(55.4% 0.046 257.417)",
+            fontFamily: "monospace",
+        },
+        y: { tickFormat: (d) => "" + d, label: null, tickSize: 0 },
+        marks: [
+            () => htl.svg`<defs><linearGradient id="gradient" gradientTransform="rotate(90)">
+                <stop offset="0%" stop-color="#0fdb9b" stop-opacity="0.5" />
+                <stop offset="100%" stop-color="#0fdb9b" stop-opacity="0" />
+              </linearGradient></defs>`,
+            Plot.areaY(rows, {
+                x: "date",
+                y1: Math.min(...rows.map((r) => r.power)) - 100,
+                y2: "power",
+                curve: "monotone-x",
+                fill: "url(#gradient)",
+            }),
+            Plot.lineY(rows, {
+                x: "date",
+                y: "power",
+                curve: "monotone-x",
+                stroke: "#0fdb9b",
+                strokeWidth: 5,
+            }),
+            Plot.dot(rows, {
+                x: "date",
+                y: "power",
+                stroke: "#0fdb9b",
+                strokeWidth: 5,
+                r: 5,
+                fill: "oklch(27.9% 0.041 260.031)",
+            }),
+            Plot.text(rows, {
+                ...plotTextArgs,
+                filter: (d, i) => {
+                    const local = isLocalMinMax(i);
+                    return local === "max";
+                },
+                dy: -16,
+                lineAnchor: "bottom",
+            }),
+            Plot.text(rows, {
+                ...plotTextArgs,
+                filter: (d, i) => {
+                    const local = isLocalMinMax(i);
+                    return local === "min";
+                },
+                dy: 16,
+                lineAnchor: "top",
+            }),
+            Plot.text(rows, {
+                ...plotTextArgs,
+                filter: (d, i) => {
+                    return i === rows.length - 1;
+                },
+                lineAnchor: "middle",
+            }),
+        ],
+    });
+
+    const div = document.querySelector("#container");
+    div.append(plot);
+</script>
