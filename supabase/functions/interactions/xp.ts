@@ -30,6 +30,11 @@ async function graphPower(
     .eq("season", season)
     .order("created_at", { ascending: false });
   if (error) return respondError(error.message);
+  if (data.length === 0) {
+    return respondError(
+      "You don't have a calc for this season yet, set one with `/xp [power]`",
+    );
+  }
 
   const payload = {
     type: 4,
