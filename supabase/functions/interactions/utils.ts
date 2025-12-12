@@ -10,7 +10,10 @@ export function respond(data: any, options: ResponseInit = {}) {
 export async function verifySignature(
   request: Request,
 ): Promise<{ valid: boolean; body: string }> {
-  const PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY")!;
+  const PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY");
+  if (!PUBLIC_KEY) {
+    throw Error("missing `DISCORD_PUBLIC_KEY`");
+  }
   const signature = request.headers.get("X-Signature-Ed25519");
   const timestamp = request.headers.get("X-Signature-Timestamp");
   if (!signature || !timestamp || request.method !== "POST") {
