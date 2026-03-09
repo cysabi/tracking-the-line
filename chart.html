@@ -10,7 +10,11 @@
   import * as htl from "https://cdn.jsdelivr.net/npm/htl@0.3/+esm";
 
   const urlParams = new URLSearchParams(window.location.search);
-  const data = urlParams.get("data");
+  const data = urlParams
+    .get("data")
+    .replaceAll("~", "+")
+    .replaceAll("_", "/")
+    .replaceAll("-", "=");
 
   const charsTimestamp = 6;
   const charsPower = 3;

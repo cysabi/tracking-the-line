@@ -1,10 +1,21 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { respond, seasonIdtoName } from "./utils.ts";
-import { dateToSeason } from "./utils.ts";
-import { encodeBase64 } from "jsr:@std/encoding/base64";
+import {
+  dateToSeason,
+  respond,
+  seasonIdtoName,
+  seasonIdtoTokens,
+} from "./utils.ts";
+import { encodeBase64 } from "@std/encoding/base64";
 import { visualize } from "./chart.ts";
+import { type Body } from "./types.d.ts";
 
-export function command(body: Root, supabase: SupabaseClient) {
+export function component(body: Body, supabase: SupabaseClient) {
+  const season = parseInt(body.data.custom_id?.split("season_").at(-1)!);
+
+  return graphPower(supabase, body.message?.interaction.user.id!, season, true);
+}
+
+export function command(body: Body, supabase: SupabaseClient) {
   const power = parsePower(body);
   const season = dateToSeason(new Date());
 
@@ -23,13 +34,42 @@ async function graphPower(
   supabase: SupabaseClient,
   discordId: string,
   season: number,
+  edit: boolean = false,
 ) {
-  const { data, error } = await supabase
-    .from("powers")
-    .select("power, created_at")
-    .eq("discord_id", discordId)
-    .eq("season", season)
-    .order("created_at", { ascending: false });
+  const [
+    { data: prevData },
+    { data, error },
+    { data: nextData },
+  ] = await Promise.all([
+    supabase
+      .from("powers")
+      .select("season")
+      .eq("discord_id", discordId)
+      .lt("season", season)
+      .order("season", { ascending: false }).limit(1),
+    supabase
+      .from("powers")
+      .select("power, created_at")
+      .eq("discord_id", discordId)
+      .eq("season", season)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("powers")
+      .select("season")
+      .eq("discord_id", discordId)
+      .gt("season", season)
+      .order("season", { ascending: true }).limit(1),
+  ]);
+
+  const prevSeason = {
+    exists: prevData?.[0]?.season !== undefined,
+    id: prevData?.[0]?.season ?? season - 1,
+  };
+  const nextSeason = {
+    exists: nextData?.[0]?.season !== undefined,
+    id: nextData?.[0]?.season ?? season + 1,
+  };
+
   if (error) return respondError(error.message);
   if (data.length === 0) {
     return respondError(
@@ -37,35 +77,33 @@ async function graphPower(
     );
   }
 
+  const uriData = data.map((row) => {
+    const timestamp = Math.floor(
+      new Date(row.created_at).valueOf() / 1000,
+    );
+    const power = row.power * 10;
+    return [
+      intToBase64(timestamp, 4).substring(0, 6),
+      intToBase64(power, 2).substring(0, 3),
+    ].join("");
+  }).join("").replaceAll("+", "~").replaceAll("/", "_").replaceAll("=", "-");
+
   const payload = {
-    type: 4,
+    type: edit ? 7 : 4,
     data: {
       embeds: [{
-        title: seasonIdtoName(dateToSeason(new Date())),
-        url: `https://cysabi.github.io/tracking-the-line/chart?data=${
-          encodeURIComponent(
-            data.map((row) => {
-              const timestamp = Math.floor(
-                new Date(row.created_at).valueOf() / 1000,
-              );
-              const power = row.power * 10;
-              return [
-                intToBase64(timestamp, 4).substring(0, 6),
-                intToBase64(power, 2).substring(0, 3),
-              ].join("");
-            }).join(""),
-          )
-        }`,
+        title: seasonIdtoName(season),
+        url: `https://cysabi.github.io/tracking-the-line/chart?data=${uriData}`,
         image: { url: "attachment://chart.png" },
         color: 1039259,
         fields: [
           {
             name: "Average XP",
             value: `\`${
-              Math.round(
+              (Math.round(
                 (data.reduce((acc, val) => acc + val.power, 0) / data.length) *
                   10,
-              ) / 10
+              ) / 10).toFixed(1)
             }\``,
             inline: true,
           },
@@ -81,6 +119,33 @@ async function graphPower(
           },
         ],
       }],
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 2,
+              label: prevSeason.id - season === -1 ? "🠜" : "🠜🠜",
+              emoji: {
+                name: seasonIdtoTokens(prevSeason.id)?.emoji,
+              },
+              custom_id: `season_${prevSeason.id}`,
+              style: 2,
+              disabled: !prevSeason.exists,
+            },
+            {
+              type: 2,
+              label: nextSeason.id - season === 1 ? "🠞" : "🠞🠞",
+              emoji: {
+                name: seasonIdtoTokens(nextSeason.id)?.emoji,
+              },
+              custom_id: `season_${nextSeason.id}`,
+              style: 2,
+              disabled: !nextSeason.exists,
+            },
+          ],
+        },
+      ],
     },
   };
 
@@ -153,7 +218,7 @@ function displayTrackedPower(
   return content;
 }
 
-function parsePower(body: Root) {
+function parsePower(body: Body) {
   const arg = body.data.options?.find((o) => o.name === "power")?.value;
   if (!arg) return null;
 
@@ -189,120 +254,4 @@ function intToBase64(int: number, len: number): string {
 
   const uint8Array = new Uint8Array(buffer);
   return encodeBase64(uint8Array);
-}
-
-// autogenerated types
-
-export interface Root {
-  app_permissions: string;
-  application_id: string;
-  attachment_size_limit: number;
-  authorizing_integration_owners: AuthorizingIntegrationOwners;
-  channel: Channel;
-  channel_id: string;
-  context: number;
-  data: Data;
-  entitlement_sku_ids: any[];
-  entitlements: any[];
-  guild: Guild;
-  guild_id: string;
-  guild_locale: string;
-  id: string;
-  locale: string;
-  member: Member;
-  token: string;
-  type: number;
-  version: number;
-}
-
-export interface AuthorizingIntegrationOwners {
-  "0": string;
-}
-
-export interface Channel {
-  flags: number;
-  guild_id: string;
-  icon_emoji: IconEmoji;
-  id: string;
-  last_message_id: string;
-  name: string;
-  nsfw: boolean;
-  parent_id: string;
-  permissions: string;
-  position: number;
-  rate_limit_per_user: number;
-  theme_color: any;
-  topic: any;
-  type: number;
-}
-
-export interface IconEmoji {
-  id: any;
-  name: string;
-}
-
-export interface Data {
-  id: string;
-  name: string;
-  options: Option[];
-  type: number;
-}
-
-export interface Option {
-  name: string;
-  type: number;
-  value: string;
-}
-
-export interface Guild {
-  features: any[];
-  id: string;
-  locale: string;
-}
-
-export interface Member {
-  avatar: any;
-  banner: any;
-  collectibles: any;
-  communication_disabled_until: any;
-  deaf: boolean;
-  display_name_styles: any;
-  flags: number;
-  joined_at: string;
-  mute: boolean;
-  nick: any;
-  pending: boolean;
-  permissions: string;
-  premium_since: any;
-  roles: any[];
-  unusual_dm_activity_until: any;
-  user: User;
-}
-
-export interface User {
-  avatar: string;
-  avatar_decoration_data: any;
-  clan: Clan;
-  collectibles: any;
-  discriminator: string;
-  display_name_styles: any;
-  global_name: any;
-  id: string;
-  primary_guild: PrimaryGuild;
-  public_flags: number;
-  username: string;
-}
-
-export interface Clan {
-  badge: string;
-  identity_enabled: boolean;
-  identity_guild_id: string;
-  tag: string;
-}
-
-export interface PrimaryGuild {
-  badge: string;
-  identity_enabled: boolean;
-  identity_guild_id: string;
-  tag: string;
 }

@@ -40,10 +40,20 @@ export function dateToSeason(date: Date) {
   return seasonId;
 }
 
+const seasonTokens = [
+  { emoji: "🌸", name: "Fresh" },
+  { emoji: "🔥", name: "Sizzle" },
+  { emoji: "☔", name: "Drizzle" },
+  { emoji: "❄️", name: "Chill" },
+];
+
+export function seasonIdtoTokens(seasonId: number) {
+  return seasonTokens.at((seasonId + 2) % 4);
+}
+
 export function seasonIdtoName(seasonId: number) {
+  const tokens = seasonIdtoTokens(seasonId)!;
+  const month = `${tokens.emoji} ${tokens.name}`;
   const year = 2022 + Math.floor((seasonId + 2) / 4);
-  const month = ["🌸 Fresh", "🔥 Sizzle", "☔ Drizzle", "❄️ Chill"].at(
-    (seasonId + 2) % 4,
-  );
   return `${month} Season ${year}`;
 }
