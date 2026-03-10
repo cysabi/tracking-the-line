@@ -125,7 +125,7 @@ async function graphPower(
           components: [
             {
               type: 2,
-              label: prevSeason.id - season === -1 ? "🠜" : "🠜🠜",
+              label: prevSeason.id - season === -1 ? "◄" : "◄◄",
               emoji: {
                 name: seasonIdtoTokens(prevSeason.id)?.emoji,
               },
@@ -135,7 +135,7 @@ async function graphPower(
             },
             {
               type: 2,
-              label: nextSeason.id - season === 1 ? "🠞" : "🠞🠞",
+              label: nextSeason.id - season === 1 ? "►" : "►►",
               emoji: {
                 name: seasonIdtoTokens(nextSeason.id)?.emoji,
               },
