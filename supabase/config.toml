@@ -53,7 +53,7 @@ max_client_conn = 100
 enabled = true
 # Specifies an ordered list of schema files that describe your database.
 # Supports glob patterns relative to supabase directory: "./schemas/*.sql"
-schema_paths = []
+schema_paths = ["./schemas/*.sql"]
 
 [db.seed]
 # If enabled, seeds the database after migrations during a db reset.
@@ -363,12 +363,15 @@ import_map = "./functions/interactions/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/interactions/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-static_files = [ "./functions/interactions/*.wasm", "./functions/interactions/*.ttf" ]
 
 [functions.oauth]
 enabled = true
 verify_jwt = false
 import_map = "./functions/oauth/deno.json"
 entrypoint = "./functions/oauth/index.ts"
+
+[functions.api]
+enabled = true
+verify_jwt = false
+import_map = "./functions/api/deno.json"
+entrypoint = "./functions/api/index.ts"

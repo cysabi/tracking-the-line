@@ -1,11 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
-import { respond, verifySignature } from "./utils.ts";
-import { command, component } from "./xp.ts";
+import { respond } from "../_shared/utils.ts";
+import { verifySignature } from "./utils.ts";
+import { command as commandXp } from "./xp.ts";
+import { command as commandRace } from "./race.ts";
 
 enum DiscordCommandType {
   Ping = 1,
   ApplicationCommand = 2,
-  MessageComponent = 3,
 }
 
 Deno.serve(async (request) => {
@@ -23,13 +24,16 @@ Deno.serve(async (request) => {
       return respond({ type: 1 });
     }
     case DiscordCommandType.ApplicationCommand: {
-      return command(json, supabase);
-    }
-    case DiscordCommandType.MessageComponent: {
-      return component(json, supabase);
-    }
-    default: {
-      return respond({ error: "bad request" }, { status: 400 });
+      switch (json.data?.name) {
+        case "xp": {
+          return commandXp(json, supabase);
+        }
+        case "race": {
+          return commandRace(json, supabase);
+        }
+      }
+      break;
     }
   }
+  return respond({ error: "bad request" }, { status: 400 });
 });

@@ -1,11 +1,5 @@
 import nacl from "tweetnacl";
-
-export function respond(data: any, options: ResponseInit = {}) {
-  return new Response(JSON.stringify(data), {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-}
+import { respond } from "../_shared/utils.ts";
 
 export async function verifySignature(
   request: Request,
@@ -28,32 +22,17 @@ export async function verifySignature(
 
   return { valid, body };
 }
+
 function hexToUint8Array(hex: string) {
   return new Uint8Array(hex.match(/.{1,2}/g)!.map((val) => parseInt(val, 16)));
 }
 
-export function dateToSeason(date: Date) {
-  const year = date.getUTCFullYear();
-  const month = date.getUTCMonth();
-
-  const seasonId = (((year - 2022) * 4) - 3) + Math.floor((month + 1) / 3);
-  return seasonId;
-}
-
-const seasonTokens = [
-  { emoji: "🌸", name: "Fresh" },
-  { emoji: "🔥", name: "Sizzle" },
-  { emoji: "☔", name: "Drizzle" },
-  { emoji: "❄️", name: "Chill" },
-];
-
-export function seasonIdtoTokens(seasonId: number) {
-  return seasonTokens.at((seasonId + 2) % 4);
-}
-
-export function seasonIdtoName(seasonId: number) {
-  const tokens = seasonIdtoTokens(seasonId)!;
-  const month = `${tokens.emoji} ${tokens.name}`;
-  const year = 2022 + Math.floor((seasonId + 2) / 4);
-  return `${month} Season ${year}`;
+export function respondError(message: string) {
+  return respond({
+    type: 4,
+    data: {
+      flags: 64,
+      content: `🚫 ${message}`,
+    },
+  });
 }

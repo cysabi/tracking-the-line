@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" style="color-scheme: dark;">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>tracking the line</title>
+  <style>
+    :root {
+      --color-text: oklch(92% 0.02 260);
+      --color-text-muted: oklch(70% 0.03 257);
+      --color-bg: oklch(27.9% 0.041 260.031);
+      --color-bg-deep: oklch(22.5% 0.041 260.031);
+      --color-bg-surface: oklch(32% 0.04 260.031);
+      --color-accent: #0fdb9b;
+      --color-error: #f87171;
+    }
+
+    @font-face {
+        font-family: 'VG5000';
+        src: url('VG5000-Regular.otf') format('opentype');
+        font-weight: normal;
+        font-style: normal;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+    }
+
+    body {
+      line-height: 1.5;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: VG5000;
+    }
+
+    img,
+    picture,
+    video,
+    canvas,
+    svg {
+      display: block;
+      max-width: 100%;
+    }
+
+    input,
+    button,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    p,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      overflow-wrap: break-word;
+    }
+
+    p {
+      text-wrap: pretty;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      text-wrap: balance;
+    }
+
+    #root,
+    #__next {
+      isolation: isolate;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root">
+
+  </div>
+  <script type="module" src="/src/index.tsx"></script>
+</body>
+
+</html>

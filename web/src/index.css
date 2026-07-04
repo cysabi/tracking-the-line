@@ -1,0 +1,25 @@
+.navlink { background: none; border: 0; padding: 0; font: inherit; color: var(--color-text-muted); text-decoration: none; cursor: pointer; transition: color 0.12s ease; }
+.navlink:hover { color: var(--color-text); }
+.logout:hover { color: var(--color-error); }
+
+.seasonbtn { background: none; border: 0; padding: 4px 8px; font: inherit; line-height: 1; color: var(--color-text-muted); cursor: pointer; transition: color 0.12s ease; }
+.seasonbtn:disabled { opacity: 0.3; cursor: default; }
+.seasonbtn:not(:disabled):hover { color: var(--color-accent); }
+
+.race-link { border: 2px solid var(--color-bg-surface); transition: border-color 0.12s ease; }
+.race-link:hover { border-color: var(--color-accent); }
+
+.legend-row { cursor: pointer; user-select: none; transition: color 0.25s ease; }
+.legend-row.off { color: var(--color-text-muted); text-decoration: line-through; }
+.legend-avatar { transition: opacity 0.25s ease; }
+.legend-row.off .legend-avatar { opacity: 0.35; }
+.legend-row:hover { color: var(--color-accent); }
+
+.legend-list { scrollbar-width: thin; scrollbar-color: var(--color-bg-surface) transparent; }
+.legend-list::-webkit-scrollbar { width: 6px; }
+.legend-list::-webkit-scrollbar-track { background: transparent; }
+.legend-list::-webkit-scrollbar-thumb { background: var(--color-bg-surface); }
+
+.chart :is(path, circle) { transition: opacity 0.25s ease, stroke 0.25s ease, fill 0.25s ease; }
+.chart g[aria-label="tip"] { color: var(--color-text); }
+.chart g[aria-label="tip"] path { fill: var(--color-bg-deep); stroke: none; transition: none; }

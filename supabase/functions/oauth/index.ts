@@ -1,34 +1,41 @@
-import { createHelpers, getRequiredEnv } from "@deno/kv-oauth";
+import * as client from "openid-client";
+import { discord, toTokens } from "../_shared/discord.ts";
+import { APP_URL, REDIRECT_URI } from "../_shared/env.ts";
 
-const {
-  signIn,
-  handleCallback,
-  getSessionId,
-  signOut,
-} = createHelpers({
-  clientId: getRequiredEnv("CLIENT_ID"),
-  clientSecret: getRequiredEnv("CLIENT_SECRET"),
-  authorizationEndpointUri: "https://custom.com/oauth/authorize",
-  tokenUri: "https://custom.com/oauth/token",
-  redirectUri: "https://my-site.com/another-dir/callback",
-});
+Deno.serve(async (req) => {
+  const url = new URL(req.url);
 
-async function handler(request: Request) {
-  const { pathname } = new URL(request.url);
-  switch (pathname) {
-    case "/oauth/signin":
-      return await signIn(request);
-    case "/oauth/callback": {
-      const { response } = await handleCallback(request);
-      return response;
-    }
-    case "/oauth/signout":
-      return await signOut(request);
-    default:
-      return await getSessionId(request) === undefined
-        ? new Response("Unauthorized", { status: 401 })
-        : new Response("You are allowed");
+  if (url.pathname.endsWith("/login")) {
+    const state = client.randomState();
+    const to = client.buildAuthorizationUrl(discord(), {
+      redirect_uri: REDIRECT_URI,
+      scope: "identify guilds",
+      state,
+    });
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: to.href,
+        "Set-Cookie":
+          `state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=300`,
+      },
+    });
   }
-}
 
-Deno.serve(handler);
+  const state = req.headers.get("Cookie")?.match(/(?:^|; )state=([^;]+)/)?.[1];
+  if (!state) return new Response("missing state", { status: 400 });
+
+  const current = new URL(REDIRECT_URI);
+  current.search = url.search;
+
+  try {
+    const tokens = await client.authorizationCodeGrant(discord(), current, {
+      expectedState: state,
+    });
+    const to = new URL(APP_URL);
+    to.searchParams.set("token", JSON.stringify(toTokens(tokens)));
+    return Response.redirect(to.href, 302);
+  } catch (e) {
+    return new Response(`oauth failed: ${e}`, { status: 400 });
+  }
+});
