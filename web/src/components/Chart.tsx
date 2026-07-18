@@ -4,6 +4,7 @@ import type { Member, Point } from "../utils.ts";
 
 export type Series = Pick<Member, "discord_id" | "name" | "points"> & {
   color: string;
+  hidden?: boolean;
 };
 
 const cssVar = (name: string) =>
@@ -120,20 +121,28 @@ function renderSingle(points: Point[], width: number) {
 }
 
 function renderMulti(series: Series[], width: number) {
-  const drawn = series.filter((s) => s.points.length);
-  const rows = drawn.flatMap((s) =>
-    s.points.map((p) => ({
-      date: new Date(p.created_at),
-      power: p.power,
-      id: s.discord_id,
-    }))
-  );
+  const all = series.filter((s) => s.points.length);
+  const drawn = all.filter((s) => !s.hidden);
+  const toRows = (list: Series[]) =>
+    list.flatMap((s) =>
+      s.points.map((p) => ({
+        date: new Date(p.created_at),
+        power: p.power,
+        id: s.discord_id,
+      }))
+    );
+  const allRows = toRows(all);
+  const rows = toRows(drawn);
+  const ext = (vals: number[]) => [Math.min(...vals), Math.max(...vals)];
 
+  const base = baseOptions(width);
   const plot = Plot.plot({
-    ...baseOptions(width),
+    ...base,
+    x: { ...base.x, domain: ext(allRows.map((r) => +r.date)).map((t) => new Date(t)) },
+    y: { ...base.y, domain: ext(allRows.map((r) => r.power)) },
     color: {
-      domain: drawn.map((s) => s.discord_id),
-      range: drawn.map((s) => s.color),
+      domain: all.map((s) => s.discord_id),
+      range: all.map((s) => s.color),
     },
     marks: [
       Plot.lineY(rows, {
@@ -171,14 +180,19 @@ function renderMulti(series: Series[], width: number) {
 export default function Chart(props: {
   variant: "single" | "multi";
   series: Series[];
-  dimmed?: string | null;
+  dimmed?: string[] | null;
+  onEnter?: (id: string) => void;
+  onLeave?: () => void;
+  onPress?: (id: string, shift: boolean) => void;
 }) {
   let el!: HTMLDivElement;
+  let plot: (Element & { value?: { id?: string } }) | undefined;
+  const valueId = () => plot?.value?.id;
 
   const applyDim = () => {
     const dim = props.dimmed;
     el.querySelectorAll<SVGElement>("[data-series]").forEach((node) => {
-      node.style.opacity = dim && node.dataset.series !== dim ? "0.1" : "";
+      node.style.opacity = dim?.length && !dim.includes(node.dataset.series!) ? "0.1" : "";
     });
   };
 
@@ -192,10 +206,17 @@ export default function Chart(props: {
       if (width === lastWidth) return;
       lastWidth = width;
       el.replaceChildren();
+      plot = undefined;
       if (!series.some((s) => s.points.length)) return;
-      const plot = variant === "single"
+      plot = variant === "single"
         ? renderSingle(series[0].points, width)
         : renderMulti(series, width);
+      plot.addEventListener("input", () => {
+        const id = valueId();
+        el.style.cursor = id && props.onPress ? "pointer" : "";
+        if (id) props.onEnter?.(id);
+        else props.onLeave?.();
+      });
       el.append(plot);
       untrack(applyDim);
     };
@@ -211,5 +232,36 @@ export default function Chart(props: {
     applyDim();
   });
 
-  return <div ref={el} class="chart" style={{ width: "100%", background: "var(--color-bg)", overflow: "hidden" }} />;
+  return (
+    <div
+      ref={el}
+      class="chart"
+      // mouse pointerdowns never reach Plot (its listener would pin the tip "sticky"); press starts here instead
+      on:pointerdown={{
+        capture: true,
+        handleEvent: (e) => {
+          if (e.pointerType !== "mouse") return;
+          e.stopPropagation();
+          const id = valueId();
+          if (e.button === 0 && id) props.onPress?.(id, e.shiftKey);
+        },
+      }}
+      // touch presses read the selection after Plot has processed the tap, so this one stays bubble-phase
+      onPointerDown={(e) => {
+        if (e.pointerType === "mouse") return;
+        const id = valueId();
+        if (id) props.onPress?.(id, e.shiftKey);
+      }}
+      // Plot ignores pointermoves while the mouse button is down; re-dispatch them un-pressed so drags keep tracking lines
+      on:pointermove={{
+        capture: true,
+        handleEvent: (e) => {
+          if (e.pointerType !== "mouse" || !(e.buttons & 1) || !plot) return;
+          e.stopPropagation();
+          plot.dispatchEvent(new PointerEvent("pointermove", { clientX: e.clientX, clientY: e.clientY, pointerType: "mouse" }));
+        },
+      }}
+      style={{ width: "100%", background: "var(--color-bg)", overflow: "hidden", "user-select": "none" }}
+    />
+  );
 }

@@ -41,8 +41,12 @@ export default function Guild() {
 
   onMount(() => {
     const up = () => dispatch({ type: "release" });
+    window.addEventListener("pointerup", up);
     window.addEventListener("mouseup", up);
-    onCleanup(() => window.removeEventListener("mouseup", up));
+    onCleanup(() => {
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("mouseup", up);
+    });
   });
 
   return (
@@ -101,10 +105,10 @@ export default function Guild() {
                 <For each={race.rows}>
                   {(r) => (
                     <li
-                      classList={{ "legend-row": true, off: r.hidden }}
+                      classList={{ "legend-row": true, off: r.hidden, hover: race.hovered === r.discord_id || !!race.drag?.ids[r.discord_id] }}
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        dispatch({ type: "press", id: r.discord_id, solo: e.shiftKey });
+                        dispatch({ type: "press", id: r.discord_id, exclude: e.shiftKey });
                       }}
                       onMouseEnter={() => dispatch({ type: "enter", id: r.discord_id })}
                       onMouseLeave={() => dispatch({ type: "leave" })}
@@ -126,7 +130,14 @@ export default function Guild() {
                 </For>
               </ul>
               <div style={{ "min-width": "0" }}>
-                <Chart variant="multi" series={race.rows.filter((r) => !r.hidden)} dimmed={race.hovered && !race.hidden[race.hovered] ? race.hovered : null} />
+                <Chart
+                  variant="multi"
+                  series={race.rows}
+                  dimmed={race.drag ? Object.keys(race.drag.ids) : race.hovered && !race.hidden[race.hovered] ? [race.hovered] : null}
+                  onEnter={(id) => dispatch({ type: "enter", id })}
+                  onLeave={() => dispatch({ type: "leave" })}
+                  onPress={(id, shift) => dispatch({ type: "press", id, exclude: shift })}
+                />
               </div>
             </div>
           </Show>

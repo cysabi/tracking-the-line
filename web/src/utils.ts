@@ -205,13 +205,13 @@ export type Row = Member & {
 export type Race = {
   hidden: Record<string, boolean>;
   hovered: string | null;
-  dragging: "hide" | "show" | null;
+  drag: { exclude: boolean; ids: Record<string, boolean> } | null;
   colors: Record<string, string | null>;
   rows: Row[];
   stats: { avg: number; peak: number } | null;
 };
 export type RaceAction =
-  | { type: "press"; id: string; solo: boolean }
+  | { type: "press"; id: string; exclude: boolean }
   | { type: "enter"; id: string }
   | { type: "leave" }
   | { type: "release" }
@@ -220,7 +220,7 @@ export type RaceAction =
 export const raceInit = (): Race => ({
   hidden: {},
   hovered: null,
-  dragging: null,
+  drag: null,
   colors: {},
   rows: [],
   stats: null,
@@ -252,34 +252,32 @@ export const raceRows = (members: Member[], race: Race): Pick<Race, "rows" | "st
 export const raceReduce = (a: RaceAction) =>
   produce<Race>((s) => {
     switch (a.type) {
-      case "press": {
-        if (a.solo) {
-          const others = s.rows.map((r) => r.discord_id).filter((id) => id !== a.id);
-          const already = !s.hidden[a.id] && others.every((id) => s.hidden[id]);
-          s.hidden = Object.fromEntries(already ? [] : others.map((id) => [id, true]));
-          return;
-        }
-        s.dragging = s.hidden[a.id] ? "show" : "hide";
-        toggle(s, a.id, s.dragging);
+      case "press":
+        s.drag = { exclude: a.exclude, ids: { [a.id]: true } };
         return;
-      }
       case "enter":
         s.hovered = a.id;
-        if (s.dragging) toggle(s, a.id, s.dragging);
+        if (s.drag) s.drag.ids[a.id] = true;
         return;
       case "leave":
         s.hovered = null;
         return;
-      case "release":
-        s.dragging = null;
+      case "release": {
+        if (!s.drag) return;
+        const { exclude, ids } = s.drag;
+        s.drag = null;
+        if (exclude) {
+          for (const id in ids) s.hidden[id] = true;
+        } else {
+          const already = s.rows.every((r) => !s.hidden[r.discord_id] === !!ids[r.discord_id]);
+          s.hidden = already ? {} : Object.fromEntries(s.rows.filter((r) => !ids[r.discord_id]).map((r) => [r.discord_id, true]));
+        }
+        if (s.rows.every((r) => s.hidden[r.discord_id])) s.hidden = {};
+        if (s.hovered && s.hidden[s.hovered]) s.hovered = null;
         return;
+      }
       case "color":
         s.colors[a.id] = a.color;
         return;
     }
   });
-
-const toggle = (s: Race, id: string, to: "hide" | "show") => {
-  to === "hide" ? s.hidden[id] = true : delete s.hidden[id];
-  if (s.rows.every((r) => s.hidden[r.discord_id])) s.hidden = {};
-};
