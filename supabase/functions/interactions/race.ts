@@ -4,7 +4,7 @@ import { rememberUser } from "../_shared/users.ts";
 import { respondError } from "./utils.ts";
 import { type Body } from "./types.d.ts";
 
-const APP_URL = "https://cysabi.github.io/tracking-the-line";
+const APP_URL = "https://cysabi.place/tracking-the-line";
 
 export async function command(body: Body, supabase: SupabaseClient) {
   const guildId = body.guild_id;

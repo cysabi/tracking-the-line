@@ -15,4 +15,4 @@ The chart page is at the root of the repo ([here](https://github.com/cysabi/trac
 
 ---
 
-*empathy included • [**@cysabi**](https://github.com/cysabi) • [cysabi.github.io](https://cysabi.github.io)*
+*empathy included • [**@cysabi**](https://github.com/cysabi) • [cysabi.place](https://cysabi.place)*

@@ -10,7 +10,7 @@ export const SUPABASE_URL = required("SUPABASE_URL");
 export const SUPABASE_SERVICE_ROLE_KEY = required("SUPABASE_SERVICE_ROLE_KEY");
 
 export const APP_URL = Deno.env.get("APP_URL") ??
-  "https://cysabi.github.io/tracking-the-line/";
-export const APP_ORIGIN = Deno.env.get("APP_ORIGIN") ?? "https://cysabi.github.io";
+  "https://cysabi.place/tracking-the-line/";
+export const APP_ORIGIN = Deno.env.get("APP_ORIGIN") ?? "https://cysabi.place";
 export const REDIRECT_URI = Deno.env.get("OAUTH_REDIRECT_URI") ??
   `${SUPABASE_URL}/functions/v1/oauth/callback`;
